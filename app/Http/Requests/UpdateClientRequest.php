@@ -2,28 +2,28 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateClientRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            //
+            'name' => ['sometimes', 'required', 'string', 'max:45'],
+            'lastname' => ['sometimes', 'required', 'string', 'max:45'],
+            'email' => [
+                'sometimes',
+                'required',
+                'email',
+                'max:100',
+                Rule::unique('clients', 'email')->ignore($this->client),
+            ],
         ];
     }
 }
