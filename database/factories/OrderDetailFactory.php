@@ -22,7 +22,7 @@ class OrderDetailFactory extends Factory
         return [
             'order_id' => Order::factory(),
             'product_id' => Product::factory(),
-            'price' => fake()->randomFloat(2, 1, 500),
+            'price' => $this->faker->randomFloat(2, 1, 500),
         ];
     }
 }

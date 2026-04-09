@@ -18,10 +18,10 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->words(3, true),
-            'description' => fake()->sentence(),
-            'price' => fake()->randomFloat(2, 1, 1000),
-            'quantity' => fake()->numberBetween(0, 500),
+            'name' => $this->faker->words(3, true),
+            'description' => $this->faker->sentence(),
+            'price' => $this->faker->randomFloat(2, 1, 1000),
+            'quantity' => $this->faker->numberBetween(0, 500),
         ];
     }
 }

@@ -19,8 +19,8 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'order_number' => strtoupper(fake()->bothify('ORD-####-??')),
-            'status_id' => fake()->numberBetween(1, 3),
+            'order_number' => strtoupper($this->faker->bothify('ORD-####-??')),
+            'status_id' => $this->faker->numberBetween(1, 3),
             'client_id' => Client::factory(),
         ];
     }
