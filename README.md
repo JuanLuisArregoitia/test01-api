@@ -1,58 +1,110 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Test01 API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A RESTful API built with **Laravel 13** and a **React SPA** frontend. Implements full authentication with Sanctum (email verification + password reset), CRUD for 5 entities, Swagger documentation, and Gitflow branching strategy.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Layer | Technology |
+|---|---|
+| Backend | Laravel 13, PHP 8.5 |
+| Auth | Laravel Sanctum (Bearer tokens) |
+| Frontend | React 19, React Router 7, Tailwind CSS 4 |
+| Build | Vite 8 |
+| DB (local) | MySQL |
+| DB (Render) | PostgreSQL |
+| Docs | Swagger / OpenAPI 3 (l5-swagger) |
+| Tests | PHPUnit 12 — 69 tests, 174 assertions |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## API Endpoints
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**Auth** (public)
+- `POST /api/v1/register` — Register + sends email verification
+- `POST /api/v1/login` — Login → returns Bearer token
+- `POST /api/v1/forgot-password` — Send password reset link
+- `POST /api/v1/reset-password` — Reset password with token
+- `GET  /api/v1/email/verify/{id}/{hash}` — Verify email (signed URL)
 
-## Learning Laravel
+**Auth** (requires Bearer token)
+- `POST /api/v1/logout`
+- `POST /api/v1/email/verification-notification` — Resend verification email
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+**Resources** (all require Bearer token)
+- `/api/v1/clients` — CRUD clients
+- `/api/v1/suppliers` — CRUD suppliers
+- `/api/v1/products` — CRUD products
+- `/api/v1/orders` — CRUD orders (status: 1=Pending, 2=Processing, 3=Completed)
+- `/api/v1/order-details` — CRUD order line items
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## API Documentation (Swagger)
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Access at `/api/documentation` with the app running.
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Local Setup
 
 ```bash
-composer require laravel/boost --dev
+# Clone and install
+composer install
+npm install
 
-php artisan boost:install
+# Environment
+cp .env.example .env
+php artisan key:generate
+
+# Database
+php artisan migrate
+php artisan db:seed     # Creates admin@example.com / password + demo data
+
+# Build frontend
+npm run build           # Production
+npm run dev             # Development (hot reload)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**Demo credentials:** `admin@example.com` / `password`
 
-## Contributing
+## Running Tests
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan test --compact
+```
 
-## Code of Conduct
+## Deployment on Render
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1. Create a new **Web Service** on Render, connect your GitHub repository.
+2. Render will auto-detect PHP via Nixpacks.
+3. Set **Build Command**:
+   ```
+   composer install --no-dev --optimize-autoloader && npm install && npm run build && php artisan config:cache && php artisan route:cache && php artisan view:cache
+   ```
+4. Set **Start Command**:
+   ```
+   php artisan serve --host 0.0.0.0 --port $PORT
+   ```
+5. Run migrations after first deploy via Render Shell:
+   ```
+   php artisan migrate --force && php artisan db:seed
+   ```
+6. Required environment variables (set in Render dashboard):
+   - `APP_KEY` — Run `php artisan key:generate --show` locally
+   - `APP_URL` — Your Render service URL (e.g. `https://test01-api.onrender.com`)
+   - `DB_CONNECTION=pgsql` + `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Render PostgreSQL)
+   - `MAIL_MAILER=log` (or configure a real mail service)
 
-## Security Vulnerabilities
+Use the included `render.yaml` for Infrastructure as Code — Render will provision the web service + PostgreSQL automatically.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Gitflow Branching
 
-## License
+```
+main          → production-ready
+develop       → integration
+feature/*     → individual features
+release/*     → pre-production
+hotfix/*      → emergency fixes
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## React Frontend Pages
+
+- `/login` — Sign in
+- `/register` — Create account
+- `/dashboard` — Stats overview (clients, suppliers, products, orders counts + recent orders)
+- `/clients`, `/suppliers`, `/products`, `/orders`, `/order-details` — Full CRUD with blue modals
+- Sidebar link → `/api/documentation` (Swagger UI)
