@@ -2,64 +2,66 @@
 
 A RESTful API built with **Laravel 13** and a **React SPA** frontend. Implements full authentication with Sanctum (email verification + password reset), CRUD for 5 entities, Swagger documentation, and Gitflow branching strategy.
 
+---
+
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Laravel 13, PHP 8.5 |
+| Backend | Laravel 13, PHP 8.4+ |
 | Auth | Laravel Sanctum (Bearer tokens) |
 | Frontend | React 19, React Router 7, Tailwind CSS 4 |
 | Build | Vite 8 |
 | DB (local) | MySQL |
-| DB (Render) | PostgreSQL |
+| DB (production) | MySQL / PostgreSQL (Laravel Cloud) |
 | Docs | Swagger / OpenAPI 3 (l5-swagger) |
 | Tests | PHPUnit 12 — 69 tests, 174 assertions |
+
+---
 
 ## API Endpoints
 
 **Auth** (public)
-- `POST /api/v1/register` — Register + sends email verification
-- `POST /api/v1/login` — Login → returns Bearer token
-- `POST /api/v1/forgot-password` — Send password reset link
-- `POST /api/v1/reset-password` — Reset password with token
-- `GET  /api/v1/email/verify/{id}/{hash}` — Verify email (signed URL)
+```
+POST /api/v1/register                     Register (sends email verification)
+POST /api/v1/login                        Login → Bearer token
+POST /api/v1/forgot-password              Send password reset link
+POST /api/v1/reset-password               Reset password with token
+GET  /api/v1/email/verify/{id}/{hash}     Verify email (signed URL)
+```
 
-**Auth** (requires Bearer token)
-- `POST /api/v1/logout`
-- `POST /api/v1/email/verification-notification` — Resend verification email
+**Auth** (Bearer token required)
+```
+POST /api/v1/logout
+POST /api/v1/email/verification-notification    Resend verification email
+```
 
-**Resources** (all require Bearer token)
-- `/api/v1/clients` — CRUD clients
-- `/api/v1/suppliers` — CRUD suppliers
-- `/api/v1/products` — CRUD products
-- `/api/v1/orders` — CRUD orders (status: 1=Pending, 2=Processing, 3=Completed)
-- `/api/v1/order-details` — CRUD order line items
+**Resources** (Bearer token required — all support index / store / show / update / destroy)
+```
+/api/v1/clients
+/api/v1/suppliers
+/api/v1/products
+/api/v1/orders          status: 1=Pending, 2=Processing, 3=Completed
+/api/v1/order-details
+```
 
-## API Documentation (Swagger)
+**Swagger UI:** `/api/documentation`
 
-Access at `/api/documentation` with the app running.
+---
 
 ## Local Setup
 
 ```bash
-# Clone and install
 composer install
 npm install
-
-# Environment
 cp .env.example .env
 php artisan key:generate
-
-# Database
 php artisan migrate
-php artisan db:seed     # Creates admin@example.com / password + demo data
-
-# Build frontend
-npm run build           # Production
-npm run dev             # Development (hot reload)
+php artisan db:seed       # admin@example.com / password + demo data
+npm run build             # or: npm run dev (hot reload)
 ```
 
-**Demo credentials:** `admin@example.com` / `password`
+---
 
 ## Running Tests
 
@@ -67,44 +69,97 @@ npm run dev             # Development (hot reload)
 php artisan test --compact
 ```
 
-## Deployment on Render
+---
 
-1. Create a new **Web Service** on Render, connect your GitHub repository.
-2. Render will auto-detect PHP via Nixpacks.
-3. Set **Build Command**:
-   ```
-   composer install --no-dev --optimize-autoloader && npm install && npm run build && php artisan config:cache && php artisan route:cache && php artisan view:cache
-   ```
-4. Set **Start Command**:
-   ```
-   php artisan serve --host 0.0.0.0 --port $PORT
-   ```
-5. Run migrations after first deploy via Render Shell:
-   ```
-   php artisan migrate --force && php artisan db:seed
-   ```
-6. Required environment variables (set in Render dashboard):
-   - `APP_KEY` — Run `php artisan key:generate --show` locally
-   - `APP_URL` — Your Render service URL (e.g. `https://test01-api.onrender.com`)
-   - `DB_CONNECTION=pgsql` + `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Render PostgreSQL)
-   - `MAIL_MAILER=log` (or configure a real mail service)
+## Deploy on Laravel Cloud
 
-Use the included `render.yaml` for Infrastructure as Code — Render will provision the web service + PostgreSQL automatically.
+Laravel Cloud manages everything from its dashboard — no special config files needed.
 
-## Gitflow Branching
+### 1. Create the application
+
+1. Go to [cloud.laravel.com](https://cloud.laravel.com) → **New Application**
+2. Connect your GitHub repo and select the `main` branch
+3. Choose a region and click **Create Application**
+
+### 2. Add a Database resource
+
+From the environment canvas, add a **MySQL** or **PostgreSQL** database resource.  
+Laravel Cloud will automatically inject all `DB_*` environment variables.
+
+### 3. Set Build Commands
+
+In **Environment → Deployments → Build Commands**, paste exactly:
 
 ```
-main          → production-ready
-develop       → integration
-feature/*     → individual features
-release/*     → pre-production
-hotfix/*      → emergency fixes
+composer install --no-dev --optimize-autoloader --no-interaction
+npm install -g pnpm
+pnpm install
+pnpm run build
 ```
 
-## React Frontend Pages
+### 4. Set Deploy Commands
 
-- `/login` — Sign in
-- `/register` — Create account
-- `/dashboard` — Stats overview (clients, suppliers, products, orders counts + recent orders)
-- `/clients`, `/suppliers`, `/products`, `/orders`, `/order-details` — Full CRUD with blue modals
-- Sidebar link → `/api/documentation` (Swagger UI)
+In **Environment → Deployments → Deploy Commands**, paste:
+
+```
+php artisan migrate --force
+php artisan optimize
+```
+
+> **Important:** `php artisan optimize` must be in **Deploy Commands** (not Build Commands).  
+> Build Commands run without your env vars, so caching config there would bake in empty `APP_KEY` → every request returns 500.
+
+> Run `php artisan db:seed` once manually from the **Commands** tab after the first successful deploy if you want demo data.
+
+### 5. Set Environment Variables
+
+In **Environment → Settings → Environment Variables**, add:
+
+| Key | Value |
+|---|---|
+| `APP_KEY` | Run `php artisan key:generate --show` locally and paste the result |
+| `APP_ENV` | `production` |
+| `APP_DEBUG` | `false` |
+| `APP_URL` | Your Cloud URL (e.g. `https://test01-api-production.laravel.cloud`) |
+| `QUEUE_CONNECTION` | `sync` |
+| `SESSION_DRIVER` | `database` |
+| `CACHE_STORE` | `database` |
+| `MAIL_MAILER` | `log` |
+| `LOG_CHANNEL` | `stderr` |
+
+> `DB_*` variables are auto-injected by Cloud when you attach the database resource.  
+> `APP_KEY` is the **most common cause of 500 errors** — make sure it is set.
+
+### 6. Deploy
+
+Click **Deploy**. First deploy takes ~2 minutes. Subsequent deploys are automatic on every push to the connected branch.
+
+---
+
+## React Frontend
+
+The SPA is served by Laravel at `/`. After building, it handles all routing client-side.
+
+| Path | Description |
+|---|---|
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/dashboard` | Stats overview + recent orders |
+| `/clients` | Full CRUD with modals |
+| `/suppliers` | Full CRUD with modals |
+| `/products` | Full CRUD with modals |
+| `/orders` | Full CRUD with modals |
+| `/order-details` | Full CRUD with modals |
+| Sidebar link | `/api/documentation` (Swagger UI) |
+
+---
+
+## Gitflow
+
+```
+main        → production-ready
+develop     → integration branch
+feature/*   → individual features
+release/*   → pre-production
+hotfix/*    → emergency patches
+```
