@@ -11,7 +11,7 @@ A RESTful API built with **Laravel 13** and a **React SPA** frontend. Implements
 | Frontend | React 19, React Router 7, Tailwind CSS 4 |
 | Build | Vite 8 |
 | DB (local) | MySQL |
-| DB (production) | PostgreSQL (Railway) |
+| DB (Render) | PostgreSQL |
 | Docs | Swagger / OpenAPI 3 (l5-swagger) |
 | Tests | PHPUnit 12 — 69 tests, 174 assertions |
 
@@ -67,42 +67,29 @@ npm run dev             # Development (hot reload)
 php artisan test --compact
 ```
 
-## Deployment on Railway
+## Deployment on Render
 
-The included `railway.toml` + `nixpacks.toml` configure the build automatically. Railway uses Nixpacks and will install both PHP 8.4 and Node.js.
+1. Create a new **Web Service** on Render, connect your GitHub repository.
+2. Render will auto-detect PHP via Nixpacks.
+3. Set **Build Command**:
+   ```
+   composer install --no-dev --optimize-autoloader && npm install && npm run build && php artisan config:cache && php artisan route:cache && php artisan view:cache
+   ```
+4. Set **Start Command**:
+   ```
+   php artisan serve --host 0.0.0.0 --port $PORT
+   ```
+5. Run migrations after first deploy via Render Shell:
+   ```
+   php artisan migrate --force && php artisan db:seed
+   ```
+6. Required environment variables (set in Render dashboard):
+   - `APP_KEY` — Run `php artisan key:generate --show` locally
+   - `APP_URL` — Your Render service URL (e.g. `https://test01-api.onrender.com`)
+   - `DB_CONNECTION=pgsql` + `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Render PostgreSQL)
+   - `MAIL_MAILER=log` (or configure a real mail service)
 
-### Steps
-
-1. Create a new project on [Railway](https://railway.app) → **Deploy from GitHub repo**
-2. Add a **PostgreSQL** plugin from the Railway dashboard (it auto-sets `DATABASE_URL`)
-3. Set the following environment variables in the Railway service dashboard:
-
-| Variable | Value |
-|---|---|
-| `APP_NAME` | `Test01 API` |
-| `APP_ENV` | `production` |
-| `APP_DEBUG` | `false` |
-| `APP_KEY` | Run `php artisan key:generate --show` locally |
-| `APP_URL` | Your Railway URL (e.g. `https://test01-api.up.railway.app`) |
-| `DB_CONNECTION` | `pgsql` |
-| `DB_HOST` | From Railway PostgreSQL plugin (`${{Postgres.PGHOST}}`) |
-| `DB_PORT` | `${{Postgres.PGPORT}}` |
-| `DB_DATABASE` | `${{Postgres.PGDATABASE}}` |
-| `DB_USERNAME` | `${{Postgres.PGUSER}}` |
-| `DB_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
-| `CACHE_STORE` | `database` |
-| `SESSION_DRIVER` | `database` |
-| `QUEUE_CONNECTION` | `sync` |
-| `MAIL_MAILER` | `log` |
-| `LOG_CHANNEL` | `stderr` |
-
-4. After the first deploy succeeds, run via Railway CLI or the **Service → Shell** tab:
-```bash
-php artisan migrate --force
-php artisan db:seed
-```
-
-That's it. Railway auto-deploys on every push to your connected branch.
+Use the included `render.yaml` for Infrastructure as Code — Render will provision the web service + PostgreSQL automatically.
 
 ## Gitflow Branching
 
