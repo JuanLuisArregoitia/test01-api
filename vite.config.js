@@ -9,8 +9,8 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.jsx'],
             refresh: true,
         }),
-        tailwindcss(),
         react(),
+        tailwindcss(),
     ],
     server: {
         watch: {
